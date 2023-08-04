@@ -1,75 +1,48 @@
-# import the necessary packages
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from face_detector import grab as t
-from face_detector import models as m
-import face_recognition as fr
-import cv2
 import numpy as np
-import os
+import cv2
+import face_recognition as fr
+from face_detector import grab as g
+from face_detector import models as m
 
-FACE_DETECTOR_PATH = "{base_path}/cascades/haarcascade_frontalface_alt2.xml".format(
-	base_path=os.path.abspath(os.path.dirname(__file__)))
 
 @csrf_exempt
 def detect(request):
-	data = {"success": False}
-	if request.method == "POST":
-		if request.FILES.get('image', None) is not None:
-			image = t._grab_image(stream=request.FILES['image'])
-		else:
-			url = request.POST.get("url", None)
-			if url is None:
-				data["error"] = "No URL provided."
-				return JsonResponse(data)
-			image = t._grab_image(url=url)
-		### START WRAPPING OF COMPUTER VISION APP
-		
-		image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #pake	
-		small_img = cv2.resize(image, (0, 0), fx = 0.25, fy = 0.25)
+    data = {"success": False}
+    if request.method == "POST":
+        if request.FILES.get("image", None) is not None:
+            image = g._grab_image(stream=request.FILES["image"])
+        else:
+            url = request.POST.get("url", None)
+            if url is None:
+                data["error"] = "No URL provided."
+                return JsonResponse(data)
+            image = g._grab_image(url=url)
 
-		m.encode_faces()
+        small_image = cv2.resize(image, (0, 0), fx=0.25, fy=0.25)
+        face_locations = fr.face_locations(small_image)
 
-		face_locations = fr.face_locations(small_img)
-		face_encodings = fr.face_encodings(small_img, face_locations)
+        for (top, right, bottom, left) in face_locations:
+            ROI = image[top+20:bottom+20, left+20:right+20]
 
-		face_names = []
-		for face_encoding in face_encodings:
-			matches = fr.compare_faces(m.known_face_encodings, face_encoding)
-			name = "Unknown"
-			confidence = '???'
+        image_grey = cv2.cvtColor(ROI, cv2.COLOR_BGR2GRAY)
+        input_image = np.expand_dims(np.expand_dims(
+            cv2.resize(image_grey, (48, 48)), -1), 0)
 
-			face_distances = fr.face_distance(m.known_face_encodings, face_encoding)
+        predict_emotion = m.model_emotion.predict(input_image)
+        predict_age = m.model_age.predict(input_image)
 
-			best_match_index = np.argmax(face_distances)
-			if matches[best_match_index]:
-				name = m.known_face_names[best_match_index]
-				confidence = m.face_confidence(
-					face_distances[best_match_index])
+        print(predict_age[0])
 
-			face_names.append(f'{name} ({confidence})')
+        data.update({"faces": face_locations, "success": True,
+                     "emotion": m.get_emotion(predict_emotion),
+                     "age": m.get_age(predict_age[0]),
+                     "gender": m.get_gender(predict_age[1]),
+                     "top": top,
+                     "right": right,
+                     "left": left,
+                     "bottom": bottom,
+                     })
 
-
-		detector = cv2.CascadeClassifier(FACE_DETECTOR_PATH)
-		rects = detector.detectMultiScale(image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-		rects = [(int(x), int(y), int(x + w), int(y + h)) for (x, y, w, h) in rects]
-
-		# zipped = zip(face_locations, face_names)
-		# rects = [(int(x), int(y), int(w), int(h)) for (x, y, w, h), name in zipped]
-
-		emotion_model = m.emotion_model
-		age_model = m.age_model
-
-		emo_image = np.expand_dims(np.expand_dims(cv2.resize(image_gray, (48, 48)), -1), 0)
-		emo_prediction = emotion_model.predict(emo_image)
-		age_prediction = age_model.predict(emo_image)
-		maxindex = int(np.argmax(emo_prediction))
-
-
-		data.update({"success": True, "num_faces": len(rects), "faces": rects,
-		"emotion": m.emotion_dict[maxindex], "gender": m.get_gender(age_prediction[1]), "age": m.get_age(age_prediction[0]),
-		"name": name})
-
-		### END WRAPPING OF COMPUTER VISION APP
-		data["success"] = True
-	return JsonResponse(data)
+    return JsonResponse(data)
