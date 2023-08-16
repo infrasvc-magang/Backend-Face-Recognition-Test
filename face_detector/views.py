@@ -1,3 +1,5 @@
+from turtle import title
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import numpy as np
@@ -6,6 +8,11 @@ import face_recognition as fr
 from face_detector import grab as g
 from face_detector import models as m
 
+def index(request):
+    context={
+        'title' : title
+    }
+    return render(request, 'index_berhasil2.html', context)
 
 @csrf_exempt
 def detect(request):
@@ -69,3 +76,4 @@ def detect(request):
             data["success"] = True
 
     return JsonResponse(data)
+    # return render(request, 'index.html', data)
