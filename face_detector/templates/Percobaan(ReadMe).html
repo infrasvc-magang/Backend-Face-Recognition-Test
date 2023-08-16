@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Image Capture</title>
+</head>
+
+<body>
+    <h1>Camera Image Capture</h1>
+    <video id="cameraStream" autoplay style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <div id="results"></div>
+
+    <script>
+        const videoElement = document.getElementById("cameraStream");
+        const canvasElement = document.getElementById("canvas");
+        const resultsDiv = document.getElementById("results");
+        let stream = null;
+
+        // Start the camera stream when the page loads
+        window.addEventListener("load", () => {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(newStream => {
+                    videoElement.srcObject = newStream;
+                    stream = newStream;
+                })
+                .catch(error => {
+                    console.error("Error accessing camera:", error);
+                });
+        });
+
+        setInterval(() => {
+            if (stream) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                canvasElement.getContext("2d").drawImage(videoElement, 0, 0);
+
+                const imageBlob = canvasElement.toDataURL("image/jpeg");
+
+                // Send image to backend
+                fetch("../static/main.js", {
+                    method: "POST",
+                    body: JSON.stringify({ image: imageBlob }),
+                    url: { url : imageBlob},
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resultsDiv.innerHTML = JSON.stringify(data.faces, null, 2);
+                    } else {
+                        console.error("Face detection failed:", data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error("An error occurred:", error);
+                });
+            }
+        }, 1000); // Send a frame every second
+    </script>
+</body>
+
+</html>

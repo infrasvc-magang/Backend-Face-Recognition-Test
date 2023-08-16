@@ -5,4 +5,6 @@ from face_detector import views as v
 urlpatterns = [
     path('face_detection/detect/', v.detect, name='detection response'),
     path('admin/', admin.site.urls),
+    path('face_detector/', v.detect),
+    path('detector/', v.index),
 ]
