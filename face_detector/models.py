@@ -10,15 +10,15 @@ model_emotion = load_model('face_detector/model/emotion.h5')
 
 
 def get_age(distr):
-    if distr >= 1 and distr <= 10:
+    if distr >= 0.1 and distr <= 0.10:
         return "9-18"
-    if distr >= 11 and distr <= 30:
+    if distr >= 0.11 and distr <= 0.30:
         return "19-25"
-    if distr >= 31 and distr <= 35:
+    if distr >= 0.31 and distr <= 0.35:
         return "26-37"
-    if distr >= 36 and distr <= 40:
+    if distr >= 0.36 and distr <= 0.40:
         return "38-49"
-    if distr >= 60:
+    if distr >= 0.60:
         return "60 +"
     return 'Unknown'
     # age_list = ['(0, 2)', '(4, 6)', '(8, 12)', '(15, 20)',
@@ -86,20 +86,20 @@ def encode_detected_face(frame):
     return face_encodings
 
 
-def compare_encoded_faces(known_encoded, detected_encoded, known_names):
-    recognized_names = []
-    for encoding in detected_encoded:
-        matches = fr.compare_faces(known_encoded, encoding)
-        face_distance = fr.face_distance(known_encoded, encoding)
-        name = 'Unknown'
+#def compare_encoded_faces(known_encoded, detected_encoded, known_names):
+    #recognized_names = []
+    #for encoding in detected_encoded:
+        #matches = fr.compare_faces(known_encoded, encoding)
+        #face_distance = fr.face_distance(known_encoded, encoding)
+        #name = 'Unknown'
 
-        best_match = np.argmin(face_distance)
-        if matches[best_match]:
-            name = known_names[best_match]
+        #best_match = np.argmin(face_distance)
+        #if matches[best_match]:
+            #name = known_names[best_match]
 
-        recognized_names.append(name)
+        #recognized_names.append(name)
 
-    return recognized_names
+    #return recognized_names
 
 
 class FaceData(models.Model):

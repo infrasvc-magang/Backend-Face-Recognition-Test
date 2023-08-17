@@ -9,59 +9,123 @@
 
 <body>
     <h1>Camera Image Capture</h1>
-    <video id="cameraStream" autoplay style="display: none;"></video>
-    <canvas id="canvas" style="display: none;"></canvas>
-    <div id="results"></div>
+    <form id="imageForm">
+        <button type="submit">Capture and Send Image</button>
+    </form>
+    <div style="position: relative;">
+        <video id="cameraStream" autoplay></video>
+        <canvas id="canvas" width="800" height="600" style="position: absolute; top: 0; left: 0;"></canvas>
+        <canvas id="capturedCanvas" width="800" height="600" style="position: absolute; top: 0; left: 0; display: none;"></canvas>
+        <div id="result"></div>
+    </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         const videoElement = document.getElementById("cameraStream");
-        const canvasElement = document.getElementById("canvas");
-        const resultsDiv = document.getElementById("results");
-        let stream = null;
+        const canvas = document.getElementById('canvas');
+        const capturedCanvas = document.getElementById('capturedCanvas');
+        const ctx = canvas.getContext('2d');
+        const capturedCtx = capturedCanvas.getContext('2d');
+        let cameraStream = null; // To keep track of the camera stream
 
-        // Start the camera stream when the page loads
-        window.addEventListener("load", () => {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(newStream => {
-                    videoElement.srcObject = newStream;
-                    stream = newStream;
-                })
-                .catch(error => {
-                    console.error("Error accessing camera:", error);
-                });
+        $(document).ready(function () {
+            // Start camera when the page loads
+            startCamera();
+
+            $('#imageForm').submit(function (event) {
+                event.preventDefault();
+
+                // Capture image and send it to backend
+                captureAndSendImage();
+            });
         });
 
-        setInterval(() => {
-            if (stream) {
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-                canvasElement.getContext("2d").drawImage(videoElement, 0, 0);
-
-                const imageBlob = canvasElement.toDataURL("image/jpeg");
-
-                // Send image to backend
-                fetch("../static/main.js", {
-                    method: "POST",
-                    body: JSON.stringify({ image: imageBlob }),
-                    url: { url : imageBlob},
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        resultsDiv.innerHTML = JSON.stringify(data.faces, null, 2);
-                    } else {
-                        console.error("Face detection failed:", data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error("An error occurred:", error);
-                });
+        function startCamera() {
+            if (cameraStream) {
+                // If the camera stream is already active, do nothing
+                return;
             }
-        }, 1000); // Send a frame every second
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    cameraStream = stream; // Store the camera stream
+                    videoElement.srcObject = stream;
+                    videoElement.onloadedmetadata = function () {
+                        videoElement.play();
+                    };
+                })
+                .catch(function (error) {
+                    console.error('Camera access error:', error);
+                });
+        }
+
+        function captureAndSendImage() {
+            // Draw the current video frame onto the canvas
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            const imageBlob = canvas.toBlob(function (blob) {
+                var formData = new FormData();
+                formData.append('image', blob, 'captured_image.png');
+
+                // Send the captured image to Django
+                $.ajax({
+                    url: '/face_detector/', // Replace with the URL of your Django view
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (data) {
+                        // Handle the response data here
+                        $('#result').empty(); // Clear previous results
+
+                        // Copy the captured image to the capturedCanvas
+                        capturedCtx.drawImage(canvas, 0, 0, capturedCanvas.width, capturedCanvas.height);
+
+                        // Draw face rectangles and info on the capturedCanvas
+                        for (let i = 0; i < data.faces.length; i++) {
+                            let face = data.faces[i];
+                            let curr_age = face.age;
+                            let curr_gen = face.gender;
+                            let curr_emo = face.emotion;
+                            let curr_name = face.name;
+
+                            for (let j = 0; j < face.location.length; j++) {
+                                let top = face.location[j][0] * 4;
+                                let right = face.location[j][1] * 4;
+                                let bottom = face.location[j][2] * 4;
+                                let left = face.location[j][3] * 4;
+
+                                // Ensure coordinates are within canvas boundaries
+                                top = Math.max(top, 0);
+                                left = Math.max(left, 0);
+                                right = Math.min(right, canvas.width);
+                                bottom = Math.min(bottom, canvas.height);
+
+                                ctx.beginPath();
+                                ctx.lineWidth = 2;
+                                ctx.strokeStyle = 'rgb(255, 0, 0)';
+                                ctx.rect(left - 10, top - 10, right - left + 20, bottom - top + 20);
+                                ctx.stroke();
+
+                                ctx.font = '15px sans-serif';
+                                ctx.fillStyle = 'rgb(36, 255, 12)';
+                                ctx.fillText(curr_name, left + 6, top - 15);
+                                ctx.fillText("Emosi: " + curr_emo, right + 15, top + 20);
+                                ctx.fillText("Gender: " + curr_gen, right + 15, top + 40);
+                                ctx.fillText("Usia: " + curr_age, right + 15, top + 60);
+                            }
+                        }
+
+                        // Show the capturedCanvas and hide the video stream
+                        capturedCanvas.style.display = 'block';
+                        videoElement.style.display = 'none';
+                    },
+                    error: function (xhr, textStatus, errorThrown) {
+                        console.log('Error:', errorThrown);
+                    }
+                });
+            }, 'image/png');
+        }
     </script>
 </body>
-
 </html>
