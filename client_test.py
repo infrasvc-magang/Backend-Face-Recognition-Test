@@ -40,7 +40,7 @@ while (True):
             curr_age = face['age']
             curr_gen = face['gender']
             curr_emo = face['emotion']
-            curr_name = face['name']
+            #curr_name = face['name']
 
         for (top, right, bottom, left) in face['location']:
             top *= 4
@@ -55,8 +55,8 @@ while (True):
             cv2.rectangle(frame, (left, top),
                           (right, top - 50), (0, 255, 0), -1)
 
-            cv2.putText(frame, curr_name, (left + 20, top - 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            #cv2.putText(frame, curr_name, (left + 20, top - 20),
+                        #cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
             cv2.putText(frame, curr_age, (left + 20, bottom + 45),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
             cv2.putText(frame, curr_gen, (left + 20, bottom + 20),

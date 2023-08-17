@@ -9,17 +9,139 @@
 
 <body>
     <h1>Camera Image Capture</h1>
-    <form id="imageForm">
-        <button type="submit">Capture and Send Image</button>
-    </form>
-    <img id="capturedImage" style="display: none;">
-    <canvas id="imageCanvas" style="display: none;"></canvas>
-
-    <div id="result">
+    <div style="position: relative;">
+        <canvas id="canvas" width="800" height="600" style="position: absolute; top: 0; left: 0;"></canvas>
+        <img id="capturedImage" style="display: none;">
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="../static/main.js">
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let continueCapturing = true;
+
+        function captureAndSendImage() {
+            if (!continueCapturing) {
+                console.log("Capture loop stopped.");
+                return;
+            }
+
+            // Access the user's camera
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    var video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = function () {
+                        // Create a canvas and draw the video frame on it
+                        var canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        var context = canvas.getContext('2d');
+
+                        // Draw the video frame onto the canvas
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Convert canvas content to base64 data URL
+                        var dataURL = canvas.toDataURL('image/png');
+                        // Remove the data URL prefix to get the image data
+                        //var imageData = dataURL.replace(/^data:image\/(png|jpg);base64,/, '');
+
+                        // Create a new FormData and append the image data
+                        var formData = new FormData();
+                        formData.append('image', imageData);
+
+                        // Display the captured image
+                        var capturedImage = document.getElementById('capturedImage');
+                        capturedImage.src = dataURL;
+                        capturedImage.style.display = 'block';
+
+                        // Show the canvas and draw on it
+                        canvas.style.display = 'block';
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Convert canvas content to a Blob (image file)
+                        canvas.toBlob(function (blob) {
+                            var formData = new FormData();
+                            formData.append('image', blob, 'captured_image.png');
+
+                            // Send the captured image to Django
+                            $.ajax({
+                                url: '/face_detector/', // Replace with the URL of your Django view
+                                type: 'POST',
+                                data: formData,
+                                processData: false,
+                                contentType: false,
+                                success: function (data) {
+                                    // Handle the response data here
+                                    $('#result').empty(); // Clear previous results
+
+                                    let count = 0;
+
+                                    for (let i = 0; i < data.faces.length; i++) {
+                                        let face = data.faces[i];
+                                        let curr_age = face.age;
+                                        let curr_gen = face.gender;
+                                        let curr_emo = face.emotion;
+                                        let curr_name = face.name;
+
+                                        for (let j = 0; j < face.location.length; j++) {
+                                            let top = face.location[j][0] * 4;
+                                            let right = face.location[j][1] * 4;
+                                            let bottom = face.location[j][2] * 4;
+                                            let left = face.location[j][3] * 4;
+
+                                            // Ensure coordinates are within canvas boundaries
+                                            top = Math.max(top, 0);
+                                            left = Math.max(left, 0);
+                                            right = Math.min(right, canvas.width);
+                                            bottom = Math.min(bottom, canvas.height);
+
+                                            ctx.beginPath();
+                                            ctx.lineWidth = 2;
+                                            ctx.strokeStyle = 'rgb(255, 0, 0)';
+                                            ctx.rect(left - 10, top - 10, right - left + 20, bottom - top + 20);
+                                            ctx.stroke();
+
+                                            ctx.font = '15px sans-serif';
+                                            ctx.fillStyle = 'rgb(36, 255, 12)';
+                                            ctx.fillText(curr_name, left + 6, top - 15);
+                                            ctx.fillText("Emosi: " + curr_emo, right + 15, top + 20);
+                                            ctx.fillText("Gender: " + curr_gen, right + 15, top + 40);
+                                            ctx.fillText("Usia: " + curr_age, right + 15, top + 60);
+                                        }
+                                    }
+
+                                    // Continue capturing and sending images
+                                    setTimeout(captureAndSendImage, 2000); // Reduced delay to 2 seconds
+                                },
+                                error: function (xhr, textStatus, errorThrown) {
+                                    console.log('Error:', errorThrown);
+
+                                    // Continue capturing and sending images
+                                    setTimeout(captureAndSendImage, 2000); // Reduced delay to 2 seconds
+                                }
+                            });
+                        }, 'image/png');
+                    };
+                    video.play();
+                })
+                .catch(function (error) {
+                    console.error('Camera access error:', error);
+
+                    // Continue capturing and sending images
+                    setTimeout(captureAndSendImage, 2000); // Reduced delay to 2 seconds
+                });
+        }
+
+        // Start capturing and sending images
+        captureAndSendImage();
+
+        // Stop capturing when the page is closed
+        window.addEventListener('beforeunload', function () {
+            continueCapturing = false;
+        });
+
     </script>
 </body>
 

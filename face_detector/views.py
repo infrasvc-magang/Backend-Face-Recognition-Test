@@ -35,14 +35,14 @@ def detect(request):
         if len(is_detected) == 0:
             data['success'] = False
         else:
-            known_names = m.known_names()
-            known_encodings = m.known_encodings()
+            #known_names = m.known_names()
+            #known_encodings = m.known_encodings()
 
             face_locations = m.face_locations(small_image)[0]
-            face_encodings = m.encode_detected_face(small_image)[0]
+            #face_encodings = m.encode_detected_face(small_image)[0]
 
-            matches = m.compare_encoded_faces(
-                known_encodings, face_encodings, known_names)[0]
+            #matches = m.compare_encoded_faces(
+                #known_encodings, face_encodings, known_names)[0]
 
             for (top, right, bottom, left) in face_locations:
                 roi = image[top:bottom, left:right]
@@ -71,7 +71,7 @@ def detect(request):
                                       "emotion": m.get_emotion(predict_emotion),
                                       "age": m.get_age(predict_age[0]),
                                       "gender": m.get_gender(predict_age[1]),
-                                      "name": matches,
+                                      #"name": matches,
                                       })
             data["success"] = True
 
