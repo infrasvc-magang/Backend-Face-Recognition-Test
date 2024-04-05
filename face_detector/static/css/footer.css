@@ -1,0 +1,11 @@
+/* footer.css */
+footer {
+	position: fixed; /* Ganti menjadi "fixed" jika ingin footer di tengah bawah layar */
+	font-family: sans-serif;
+	bottom: 0;
+	left: 25%; /* Agar footer berada di tengah horizontal */
+	width: 50%;
+	color: white;
+	padding: 15px;
+  }
+  

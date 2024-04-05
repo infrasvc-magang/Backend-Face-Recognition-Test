@@ -14,7 +14,7 @@ while (True):
     count += 1
 
     if (des / count == 1):
-        image_path = "frame.jpg"
+        image_path = "image/frame.jpg"
 
         cv2.imwrite(image_path, frame)
         payload = {"url": image_path}
@@ -40,14 +40,13 @@ while (True):
             curr_age = face['age']
             curr_gen = face['gender']
             curr_emo = face['emotion']
-            #curr_name = face['name']
+            curr_name = face['name']
 
         for (top, right, bottom, left) in face['location']:
             top *= 4
             right *= 4
             bottom *= 4
             left *= 4
-
             cv2.rectangle(frame, (left, top),
                           (right, bottom), (0, 255, 0), 2)
             cv2.rectangle(frame, (left, bottom),
@@ -55,8 +54,8 @@ while (True):
             cv2.rectangle(frame, (left, top),
                           (right, top - 50), (0, 255, 0), -1)
 
-            #cv2.putText(frame, curr_name, (left + 20, top - 20),
-                        #cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            cv2.putText(frame, curr_name, (left + 20, top - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
             cv2.putText(frame, curr_age, (left + 20, bottom + 45),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
             cv2.putText(frame, curr_gen, (left + 20, bottom + 20),
@@ -68,6 +67,8 @@ while (True):
             success = False
             count = 0
 
+    cv2.namedWindow("frame", cv2.WND_PROP_AUTOSIZE)
+    cv2.setWindowProperty("frame", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_FULLSCREEN)
     cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
